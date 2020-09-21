@@ -20,6 +20,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # Information on dataset.
 NUM_CLASSES = 10
 IMAGE_SIZE = 784
+NUM_NEURONS = 512
 
 
 # Use these to set the algorithm to use.
@@ -34,8 +35,8 @@ class NeuralNetwork_2Layer():
 		self.outputSize = outputSize
 		self.neuronsPerLayer = neuronsPerLayer
 		self.lr = learningRate
-		self.W1 = np.random.randn(self.inputSize, self.neuronsPerLayer)
-		self.W2 = np.random.randn(self.neuronsPerLayer, self.outputSize)
+		self.w1 = np.random.randn(self.inputSize, self.neuronsPerLayer)
+		self.w2 = np.random.randn(self.neuronsPerLayer, self.outputSize)
 
 	# Activation function.
 	def __sigmoid(self, x):
@@ -54,14 +55,55 @@ class NeuralNetwork_2Layer():
 	# Training with backpropagation.
 	def train(self, xVals, yVals, epochs = 5, minibatches = True, mbs = 100):
 
-	#TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
+		#TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
+
+		# Get first 2 layers
+		l1, l2 = self.__forward(xVals)
+
+		# Backpropogate
+
+		self.__backward(l1, l2, xVals, yVals)
+
 		print("in train")
 
+
 	# Forward pass.
-	def __forward(self, input):
-		layer1 = self.__sigmoid(np.dot(input, self.W1))
-		layer2 = self.__sigmoid(np.dot(layer1, self.W2))
+	def __forward(self, xVals):
+
+		# Get layer 1 = input . w1
+		layer1 = self.__sigmoid(np.dot(xVals, self.w1))
+
+		# Get layer 2 = l1 . w2
+		layer2 = self.__sigmoid(np.dot(layer1, self.w2))
+
 		return layer1, layer2
+
+	# Backward pass.
+	def __backward(self, l1, l2, xVals, yVals):
+
+		# layer 2 error = l2 - y
+		l2e = np.subtract(l2, yVals)
+
+		# layer 2 delta = l2e * f'(l2)
+		l2d = l2e * self.__sigmoidDerivative(l2)
+
+		# layer 1 error = l2d * Transpose(W2)
+		l1e = np.dot(l2d, self.w2.T)
+
+		# layer 1 delta = l1e * f'(l1)
+		l1d = l1e * self.__sigmoidDerivative(l1)
+
+		# layer 1 adj = (Transpose(x) . l1d) * lr
+		l1a = (np.dot(xVals.T, l1d)) * self.lr
+
+		# layer 2 adj = (Transpose(l1) . l2d) * lr
+		l2a = (np.dot(l1.T, l2d)) * self.lr
+
+		# Update weights
+		self.w1 -= l1a
+		self.w2 -= l2a
+
+		print("in backward", l2d)
 
 	# Predict.
 	def predict(self, xVals):
@@ -95,8 +137,12 @@ def getRawData():
 def preprocessData(raw):
 	((xTrain, yTrain), (xTest, yTest)) = raw
 
-	#TODO: Add range reduction here (0-255 ==> 0.0-1.0).
+	# Range reduction here (0-255 ==> 0.0-1.0).
 	xTrain, xTest = xTrain/255, xTest/255
+
+	# Flatten the nd arrays to 1d
+	xTrain = xTrain.reshape(xTrain.shape[0], xTrain.shape[1] * xTrain.shape[2])
+	xTest = xTest.reshape(xTest.shape[0], xTest.shape[1] * xTest.shape[2])
 
 	yTrainP = to_categorical(yTrain, NUM_CLASSES)
 	yTestP = to_categorical(yTest, NUM_CLASSES)
@@ -115,7 +161,7 @@ def trainModel(data):
 
 	elif ALGORITHM == "custom_net":
 		print("Building and training Custom_NN.")
-		neural_net = NeuralNetwork_2Layer(28, 10, 512)
+		neural_net = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, NUM_NEURONS)
 		model = neural_net.train(xTrain, yTrain)
 
 	elif ALGORITHM == "tf_net":
