@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.utils import to_categorical
 import random
-
+import sklearn.metrics as sm
 
 # Setting random seeds to keep everything deterministic.
 random.seed(1618)
@@ -198,15 +198,31 @@ def runModel(data, model):
 
 
 
-def evalResults(data, preds):   #TODO: Add F1 score confusion matrix here.
+def evalResults(data, preds):
 	xTest, yTest = data
 	acc = 0
+
 	for i in range(preds.shape[0]):
-		if np.array_equal(preds[i], yTest[i]):   acc = acc + 1
+		if np.array_equal(preds[i], yTest[i]):
+			acc = acc + 1
+
 	accuracy = float(acc) / preds.shape[0]
 	print("Classifier algorithm: %s" % ALGORITHM)
 	print("Classifier accuracy: %f%%" % (accuracy * 100))
-	print()
+
+	# Getting predicted and actual vals for confusion matrix
+
+	pVals = []
+	acVals = []
+
+	for i in range(preds.shape[0]):
+		pVals.append(np.argmax(preds[i]))
+		acVals.append(np.argmax(yTest[i]))
+
+	print("Confusion Matrix")
+	print(sm.confusion_matrix(acVals, pVals))
+
+	print(sm.f1_score(acVals, pVals, average='micro'))
 
 
 
