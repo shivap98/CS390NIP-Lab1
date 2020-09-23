@@ -1,11 +1,9 @@
-
 import os
-import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.utils import to_categorical
 import random
+import numpy as np
 import sklearn.metrics as sm
+import tensorflow as tf
+from tensorflow.keras.utils import to_categorical
 
 # Setting random seeds to keep everything deterministic.
 random.seed(1618)
@@ -14,7 +12,7 @@ np.random.seed(1618)
 tf.random.set_seed(1618)
 
 # Disable some troublesome logging.
-#tf.logging.set_verbosity(tf.logging.ERROR)   # Uncomment for TF1.
+# tf.logging.set_verbosity(tf.logging.ERROR)   # Uncomment for TF1.
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # Information on dataset.
@@ -25,8 +23,8 @@ NUM_NEURONS = 512
 
 # Use these to set the algorithm to use.
 # ALGORITHM = "guesser"
-ALGORITHM = "custom_net"
-#ALGORITHM = "tf_net"
+# ALGORITHM = "custom_net"
+ALGORITHM = "tf_net"
 
 
 class NeuralNetwork_2Layer():
@@ -172,8 +170,13 @@ def trainModel(data):
 
 	elif ALGORITHM == "tf_net":
 		print("Building and training TF_NN.")
-		print("Not yet implemented.")                   #TODO: Write code to build and train your keras neural net.
-		return None
+
+		model = tf.keras.models.Sequential(
+			[tf.keras.layers.Flatten(), tf.keras.layers.Dense(256, activation=tf.nn.relu),
+			 tf.keras.layers.Dense(10, activation=tf.nn.softmax)])
+		model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+		model.fit(xTrain, yTrain, epochs=5)
+		return model
 
 	else:
 		raise ValueError("Algorithm not recognized.")
@@ -190,8 +193,17 @@ def runModel(data, model):
 
 	elif ALGORITHM == "tf_net":
 		print("Testing TF_NN.")
-		print("Not yet implemented.")                   #TODO: Write code to run your keras neural net.
-		return None
+
+		# get predictions
+		preds = model.predict(data)
+
+		# convert to only 0s and 1s
+		ans = []
+		for entry in preds:
+			pred = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			pred[np.argmax(entry)] = 1
+			ans.append(pred)
+		return np.array(ans)
 
 	else:
 		raise ValueError("Algorithm not recognized.")
@@ -210,7 +222,7 @@ def evalResults(data, preds):
 	print("Classifier algorithm: %s" % ALGORITHM)
 	print("Classifier accuracy: %f%%" % (accuracy * 100))
 
-	# Getting predicted and actual vals for confusion matrix
+	# Getting predicted and actual vals for confusion matrix and f1 score
 
 	pVals = []
 	acVals = []
@@ -222,6 +234,7 @@ def evalResults(data, preds):
 	print("Confusion Matrix")
 	print(sm.confusion_matrix(acVals, pVals))
 
+	print("F1 Score")
 	print(sm.f1_score(acVals, pVals, average='micro'))
 
 
