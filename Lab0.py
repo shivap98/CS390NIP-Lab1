@@ -48,23 +48,24 @@ class NeuralNetwork_2Layer():
 		return (val * (1 - val))
 
 	# Batch generator for mini-batches. Not randomized.
-	def __batchGenerator(self, l, n):
-		for i in range(0, len(l), n):
-			yield l[i : i + n]
+	def __batchGenerator(self, (x, y), n):
+		for i in range(0, len(x), n):
+			yield x[i : i + n], y[i : i + n]
 
 	# Training with backpropagation.
 	def train(self, xVals, yVals, epochs = 5, minibatches = True, mbs = 100):
 
-		#TODO: Implement backprop. allow minibatches. mbs should specify the size of each minibatch.
+		# Train minibatches, epoch number of times with each having 1 fwd and back pass
 
-		# Get first 2 layers
-		l1, l2 = self.__forward(xVals)
+		for i in range(0, epochs):
+			for (xBatch, yBatch) in self.__batchGenerator((xVals, yVals), mbs):
+				# Get first 2 layers
+				l1, l2 = self.__forward(xBatch)
 
-		# Backpropogate
+				# Backpropogate
+				self.__backward(l1, l2, xBatch, yBatch)
 
-		self.__backward(l1, l2, xVals, yVals)
-
-		print("in train")
+		return self
 
 
 	# Forward pass.
@@ -103,12 +104,17 @@ class NeuralNetwork_2Layer():
 		self.w1 -= l1a
 		self.w2 -= l2a
 
-		print("in backward", l2d)
-
 	# Predict.
 	def predict(self, xVals):
 		_, layer2 = self.__forward(xVals)
-		return layer2
+
+		# Creating the array of predictions with only 0s and 1s
+		ans = []
+		for entry in layer2:
+			pred = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			pred[np.argmax(entry)] = 1
+			ans.append(pred)
+		return np.array(ans)
 
 
 # Classifier that just guesses the class label.
@@ -138,7 +144,7 @@ def preprocessData(raw):
 	((xTrain, yTrain), (xTest, yTest)) = raw
 
 	# Range reduction here (0-255 ==> 0.0-1.0).
-	xTrain, xTest = xTrain/255, xTest/255
+	xTrain, xTest = xTrain/255.0, xTest/255.0
 
 	# Flatten the nd arrays to 1d
 	xTrain = xTrain.reshape(xTrain.shape[0], xTrain.shape[1] * xTrain.shape[2])
@@ -162,7 +168,7 @@ def trainModel(data):
 	elif ALGORITHM == "custom_net":
 		print("Building and training Custom_NN.")
 		neural_net = NeuralNetwork_2Layer(IMAGE_SIZE, NUM_CLASSES, NUM_NEURONS)
-		model = neural_net.train(xTrain, yTrain)
+		return neural_net.train(xTrain, yTrain)
 
 	elif ALGORITHM == "tf_net":
 		print("Building and training TF_NN.")
@@ -177,14 +183,16 @@ def trainModel(data):
 def runModel(data, model):
 	if ALGORITHM == "guesser":
 		return guesserClassifier(data)
+
 	elif ALGORITHM == "custom_net":
 		print("Testing Custom_NN.")
-		print("Not yet implemented.")                   #TODO: Write code to run your custon neural net.
-		return None
+		return model.predict(data)
+
 	elif ALGORITHM == "tf_net":
 		print("Testing TF_NN.")
 		print("Not yet implemented.")                   #TODO: Write code to run your keras neural net.
 		return None
+
 	else:
 		raise ValueError("Algorithm not recognized.")
 
@@ -195,7 +203,7 @@ def evalResults(data, preds):   #TODO: Add F1 score confusion matrix here.
 	acc = 0
 	for i in range(preds.shape[0]):
 		if np.array_equal(preds[i], yTest[i]):   acc = acc + 1
-	accuracy = acc / preds.shape[0]
+	accuracy = float(acc) / preds.shape[0]
 	print("Classifier algorithm: %s" % ALGORITHM)
 	print("Classifier accuracy: %f%%" % (accuracy * 100))
 	print()
